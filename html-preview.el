@@ -148,6 +148,23 @@ on every save."
   (setq-local html-preview--timer
               (run-with-idle-timer 1 nil #'html-preview)))
 
+(defun me/detect-or-ask-generator ()
+  "try to figure out the generator by checking file extension.
+   If not successful, then ask user to choose a generator."
+  (interactive)
+  (let* (
+         (file-ext (file-name-extension (buffer-file-name)))
+    )
+
+    (if (string-match-p "html\\|htm" file-ext)
+        'nil
+
+      (ivy-read "options: " '("ox-reveal" "ox-html")
+            :action '(1
+                      ("o" (lambda (x) (quote x)) "choose")))
+      )
+))
+
 (defun html-preview--generate-default ()
   (buffer-file-name))
 
@@ -161,7 +178,10 @@ on every save."
 
 (defun html-preview--generate ()
   "Generate html from the appropriate function"
-  (let ((f (cdr (assoc html-preview-generator-name html-preview-generate-function-alist))))
+  (let* (
+         (html-preview-generator-name (me/detect-or-ask-generator))
+        (f (cdr (assoc html-preview-generator-name html-preview-generate-function-alist))))
+
     (if (not (null f))
         (funcall f)
       (message (concat "No html generate function for "
@@ -202,7 +222,10 @@ on every save."
           ;; doesn't work in this case!
           (xwidget-webkit-goto-uri xw "")
           (xwidget-webkit-goto-uri xw url))
-      (xwidget-webkit-new-session url #'html-preview--xwidget-webkit-callback)
+      ;; (xwidget-webkit-new-session url #'html-preview--xwidget-webkit-callback)
+      ;; showgood: remove the callback argument since xwidget-webkit-new-session doesn't seem
+      ;; to accept that argument.
+      (xwidget-webkit-new-session url)
       (with-current-buffer (xwidget-buffer (xwidget-webkit-last-session))
         (rename-buffer html-preview-buffer-name)))))
 
